@@ -115,4 +115,10 @@ app.use('/fapi', async (req, res) => {
 });
 
 
+app.get('/', async ({}, res) => {
+    const ip = await getIP();
+    res.send(`Binance Order Service ${ip}`);
+});
+
+
 module.exports = app;
