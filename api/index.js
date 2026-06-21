@@ -1,19 +1,117 @@
 const express = require('express');
 const app = express();
 
-// Route mặc định
-app.get('/', (req, res) => {
-    res.send('Chào mừng bạn đến với ứng dụng Node.js trên Vercel! 🚀');
-});
 
-// Thêm một route ví dụ khác
-app.get('/api/user', (req, res) => {
-    res.json({
-        id: 1,
-        name: "Vercel User",
-        status: "Active"
+async function getURL (url) {
+    return new Promise((resolve, reject)=> {
+        https.get(url, (resp)=> {
+            let data = "";
+            resp.on("data", (chunk) => {
+                data += chunk;
+            });
+            resp.on("end", () => {
+                resolve(data);
+                // return data;
+            });
+        }).on("error", (err) => {
+            console.log("Error: " + err.message);
+            reject(err);
+        });
     });
+}
+
+
+async function getIP() {
+    const ip = await getURL("https://api.ipify.org/");
+    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+        return ip;
+    }
+    return "0.0.0.0";
+}
+
+
+app.use('/api', async (req, res) => {
+    const options = {
+        hostname: 'api.binance.com',
+        path: req.originalUrl,
+        method: req.method,
+        headers: {
+            'X-MBX-APIKEY': req.headers['x-mbx-apikey'] || '',
+            'Content-Type': 'application/json',
+        },
+    };
+
+    console.log("/api options", JSON.stringify(options));
+    console.log("/api headers", JSON.stringify(req.headers));
+
+    const proxy = https.request(options, (response) => {
+        res.status(response.statusCode || 500);
+
+        const contentType = response.headers['content-type'];
+        if (contentType) {
+            res.setHeader('content-type', contentType);
+        }
+
+        let data = '';
+
+        response.on('data', (chunk) => {
+            data += chunk;
+        });
+
+        response.on('end', () => {
+            res.send(data);
+        });
+    });
+
+    proxy.on('error', (err) => {
+        console.error(err);
+        res.status(500).send('Proxy error');
+    });
+
+    proxy.end();
 });
 
-// Xuất app ra để Vercel xử lý (Không dùng app.listen())
+
+app.use('/fapi', async (req, res) => {
+    const options = {
+        hostname: 'fapi.binance.com',
+        path: req.originalUrl,
+        method: req.method,
+        headers: {
+            'X-MBX-APIKEY': req.headers['x-mbx-apikey'] || '',
+            'Content-Type': 'application/json',
+        },
+    };
+
+    console.log("/fapi options", JSON.stringify(options));
+    console.log("/fapi headers", JSON.stringify(req.headers));
+
+    const proxy = https.request(options, (response) => {
+        res.status(response.statusCode || 500);
+
+        const contentType = response.headers['content-type'];
+        if (contentType) {
+            res.setHeader('content-type', contentType);
+        }
+
+        let data = '';
+
+        response.on('data', (chunk) => {
+            data += chunk;
+        });
+
+        response.on('end', () => {
+            res.send(data);
+        });
+    });
+
+    proxy.on('error', (err) => {
+        console.error(err);
+        res.status(500).send('Proxy error');
+    });
+
+    proxy.end();
+});
+
+
 module.exports = app;
